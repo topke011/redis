@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 
         char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
         int commands_to_process = 2;
-        while (commands_to_process--)
+        while (1)
         {
             int bytes_read = read(client_socket, buffer, DEFAULT_BUFFER_SIZE);
             if (bytes_read == -1)
