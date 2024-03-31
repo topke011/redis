@@ -7,9 +7,33 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <thread>
 
 const std::string PING_COMMAND = "*1\r\n$4\r\nping\r\n";
+const std::string PONG_RESPONSE = "+PONG\r\n";
 const size_t DEFAULT_BUFFER_SIZE = 1024;
+
+void handle_connection(int client_socket)
+{
+    char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
+    int commands_to_process = 2;
+    while (commands_to_process--)
+    {
+        int bytes_read = read(client_socket, buffer, DEFAULT_BUFFER_SIZE);
+        if (bytes_read == -1)
+        {
+            std::cerr << "Failed to raed form cliennt" << std::endl;
+            return;
+        }
+
+        std::string command = std::string(buffer, bytes_read);
+        if (command == PING_COMMAND)
+        {
+            int bytes_written = write(client_socket, PONG_RESPONSE.c_str(), PONG_RESPONSE.size());
+            std::cout << "Send: " << bytes_written << std::endl;
+        }
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -55,33 +79,16 @@ int main(int argc, char **argv)
 
 	std::cout << "Waiting for a client to connect...\n";
 
-	int client_socket = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
-	if (client_socket == -1)
-	{
-		std::cerr << "Failed to accept client connection\n";
-		return 1;
-	}
-
-    int commands_to_process = 2;
-    while (commands_to_process)
+    while (1)
     {
-        commands_to_process--;
-        char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
-        int bytes_read = read(client_socket, buffer, DEFAULT_BUFFER_SIZE);
-        if (bytes_read == -1)
+        int client_socket = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+        if (client_socket == -1)
         {
-            std::cerr << "Failed to read from client" << std::endl;
+            std::cerr << "Failed to accept client connection\n";
             return 1;
-        } 
-
-        std::cout << "Received: " << bytes_read << std::endl;
-        std::string command = std::string(buffer, bytes_read);
-        if (command == PING_COMMAND)
-        {
-            std::string response = "+PONG\r\n";
-            int bytes_written = write(client_socket, response.c_str(), response.size());
-            std::cout << "Send: " << bytes_written << std::endl;
         }
+
+        std::thread(handle_connection, client_socket).detach();
     }
 
 	close(server_fd);
