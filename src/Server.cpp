@@ -9,6 +9,7 @@
 #include <netdb.h>
 
 const std::string PING_COMMAND = "*1\r\n$4\r\nping\r\n";
+const size_t DEFAULT_BUFFER_SIZE = 1024;
 
 int main(int argc, char **argv)
 {
@@ -61,24 +62,27 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	char buffer[1024] = {0};
-	int bytes_read = read(client_socket, buffer, 1024);
-	if (bytes_read == -1)
-	{
-		std::cerr << "Failed to read from client\n";
-		return 1;
-	}
+    int commands_to_process = 2;
+    while (commands_to_process)
+    {
+        commands_to_process--;
+        char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
+        int bytes_read = read(client_socket, buffer, DEFAULT_BUFFER_SIZE);
+        if (bytes_read == -1)
+        {
+            std::cerr << "Failed to read from client" << std::endl;
+            return 1;
+        } 
 
-	std::cout << "Received: " << bytes_read << std::endl;
-	std::string command = std::string(buffer, bytes_read);
-	if (command == PING_COMMAND)
-	{
-		std::string response = "+PONG\r\n";
-        int bytes_written = write(client_socket, response.c_str(), response.size());
-        std::cout << "Sent: " << bytes_written << std::endl;
-	}
-
-	std::cout << "Client connected\n";
+        std::cout << "Received: " << bytes_read << std::endl;
+        std::string command = std::string(buffer, bytes_read);
+        if (command == PING_COMMAND)
+        {
+            std::string response = "+PONG\r\n";
+            int bytes_written = write(client_socket, response.c_str(), response.size());
+            std::cout << "Send: " << bytes_written << std::endl;
+        }
+    }
 
 	close(server_fd);
 
